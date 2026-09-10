@@ -8,8 +8,8 @@
 		body { 
 			margin: 0; 
 			overflow: hidden; 
-			background-color: #222; 
-			color: white;
+			background: linear-gradient(135deg, #edf5ff 0%, #e4f0ff 100%);
+			color: #123;
 			font-family: sans-serif;
 		}
 		#ui-container {
@@ -19,15 +19,24 @@
 			transform: translate(-50%, -50%);
 			text-align: center;
 			z-index: 10;
+			background: rgba(255,255,255,0.72);
+			padding: 25px 30px;
+			border-radius: 16px;
+			box-shadow: 0 10px 30px rgba(21, 74, 130, 0.12);
 		}
 		button {
 			padding: 15px 25px;
 			font-size: 18px;
-			background-color: #007BFF;
+			background: linear-gradient(135deg, #2b7fff, #0a4fc6);
 			color: white;
 			border: none;
-			border-radius: 8px;
+			border-radius: 10px;
 			cursor: pointer;
+			box-shadow: 0 8px 18px rgba(0, 88, 214, 0.22);
+		}
+		canvas {
+			display: block;
+			filter: brightness(0.9) saturate(0.9);
 		}
 	</style>
 	<script type="importmap">
@@ -50,29 +59,45 @@
 
 		const scene = new THREE.Scene();
 		const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-		const renderer = new THREE.WebGLRenderer({ antialias: true });
-		
+		const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+		renderer.setClearColor(0xeef5ff, 1);
 		renderer.setSize(window.innerWidth, window.innerHeight);
 		document.body.appendChild(renderer.domElement);
 
-		const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+		const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
 		scene.add(ambientLight);
-		const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+		const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
 		directionalLight.position.set(5, 10, 7);
 		scene.add(directionalLight);
 
-		const geometry = new THREE.BoxGeometry(1.5, 3, 0.15); 
-		const materials = [
-			new THREE.MeshStandardMaterial({ color: 0x333333 }),
-			new THREE.MeshStandardMaterial({ color: 0x333333 }),
-			new THREE.MeshStandardMaterial({ color: 0x333333 }),
-			new THREE.MeshStandardMaterial({ color: 0x333333 }),
-			new THREE.MeshStandardMaterial({ color: 0x111111 }),
-			new THREE.MeshStandardMaterial({ color: 0x555555 })
+		const phoneGroup = new THREE.Group();
+		scene.add(phoneGroup);
+
+		const bodyGeometry = new THREE.BoxGeometry(1.5, 3, 0.15);
+		const bodyMaterials = [
+			new THREE.MeshStandardMaterial({ color: 0x0d0d0d, metalness: 0.8, roughness: 0.5 }),
+			new THREE.MeshStandardMaterial({ color: 0x0d0d0d, metalness: 0.8, roughness: 0.5 }),
+			new THREE.MeshStandardMaterial({ color: 0x0d0d0d, metalness: 0.8, roughness: 0.5 }),
+			new THREE.MeshStandardMaterial({ color: 0x0d0d0d, metalness: 0.8, roughness: 0.5 }),
+			new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.5, roughness: 0.6 }),
+			new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.5, roughness: 0.6 })
 		];
-		
-		const phone = new THREE.Mesh(geometry, materials);
-		scene.add(phone);
+		const phone = new THREE.Mesh(bodyGeometry, bodyMaterials);
+		phoneGroup.add(phone);
+
+		const screenGeometry = new THREE.PlaneGeometry(1.05, 1.75);
+		const screenMaterial = new THREE.MeshStandardMaterial({
+			color: 0x0b1320,
+			emissive: 0x183b74,
+			emissiveIntensity: 0.4,
+			metalness: 0.2,
+			roughness: 0.5
+		});
+		const screen = new THREE.Mesh(screenGeometry, screenMaterial);
+		screen.position.set(0, 0, 0.09);
+		phoneGroup.add(screen);
+
+		phoneGroup.visible = false;
 		camera.position.z = 5;
 
 		function handleOrientation(event) {
@@ -80,7 +105,7 @@
 			const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
 			const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
 
-			phone.rotation.x = beta - Math.PI / 2;
+			phone.rotation.x = beta;
 			phone.rotation.y = gamma;
 			phone.rotation.z = -alpha;
 		}
