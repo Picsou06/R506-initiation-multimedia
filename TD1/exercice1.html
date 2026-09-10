@@ -18,38 +18,38 @@
 
 	<script>
 		if ('geolocation' in navigator) {
-			var options = {
-			  enableHighAccuracy: true,
-			};
-
 			function success(pos) {
-			  var crd = pos.coords;
+				var crd = pos.coords;
 
-			  document.getElementById('loading-getcurrentposition').remove();
-			  
-			  var table = document.createElement('table');
-			  
-			  var header = table.createTHead();
-			  var headerRow = header.insertRow(0);
-			  headerRow.insertCell(0).innerHTML = "<b>Propriété</b>";
-			  headerRow.insertCell(1).innerHTML = "<b>Valeur</b>";
+				var loadingElement = document.getElementById('loading-watchposition');
+				if (loadingElement) {
+					loadingElement.remove();
+				}
 
-			  var tbody = table.createTBody();
 
-			  function ajouterLigne(propriete, valeur) {
-				  var row = tbody.insertRow();
-				  row.insertCell(0).innerHTML = "<b>" + propriete + "</b>";	
-				  row.insertCell(1).innerHTML = valeur !== null ? valeur : "Non disponible";
-			  }
+				var table = document.createElement('table');
 
-			  ajouterLigne("Latitude", crd.latitude);
-			  ajouterLigne("Longitude", crd.longitude);
-			  ajouterLigne("Précision", crd.accuracy + " mètres");
-			  ajouterLigne("Altitude", crd.altitude);
-			  ajouterLigne("Vitesse", crd.speed);
-			  ajouterLigne("Date", new Date(pos.timestamp).toLocaleString());
+				var header = table.createTHead();
+				var headerRow = header.insertRow(0);
+				headerRow.insertCell(0).innerHTML = "<b>Propriété</b>";
+				headerRow.insertCell(1).innerHTML = "<b>Valeur</b>";
 
-			  document.getElementById('getcurrentposition').appendChild(table);
+				var tbody = table.createTBody();
+
+				function ajouterLigne(propriete, valeur) {
+					var row = tbody.insertRow();
+					row.insertCell(0).innerHTML = "<b>" + propriete + "</b>";	
+					row.insertCell(1).innerHTML = valeur !== null ? valeur : "Non disponible";
+				}
+
+				ajouterLigne("Latitude", crd.latitude);
+				ajouterLigne("Longitude", crd.longitude);
+				ajouterLigne("Précision", crd.accuracy + " mètres");
+				ajouterLigne("Altitude", crd.altitude);
+				ajouterLigne("Vitesse", crd.speed);
+				ajouterLigne("Date", new Date(pos.timestamp).toLocaleString());
+
+				document.getElementById('getcurrentposition').appendChild(table);
 			}
 
 			function error(err) {
@@ -58,36 +58,44 @@
 			  console.warn(`ERREUR (${err.code}): ${err.message}`);
 			}
 
-			navigator.geolocation.getCurrentPosition(success, error, options);
+			navigator.geolocation.getCurrentPosition(success, error);
 
 			function successWatch(pos) {
-			  var crd = pos.coords;
+				var crd = pos.coords;
 
-			  document.getElementById('loading-watchposition').remove();
-			  
-			  var table = document.createElement('table');
-			  
-			  var header = table.createTHead();
-			  var headerRow = header.insertRow(0);
-			  headerRow.insertCell(0).innerHTML = "<b>Propriété</b>";
-			  headerRow.insertCell(1).innerHTML = "<b>Valeur</b>";
+				var loadingElement = document.getElementById('loading-watchposition');
+				if (loadingElement) {
+					loadingElement.remove();
+				}
 
-			  var tbody = table.createTBody();
+				var oldTable = document.getElementById('table-watch');
+				if (oldTable) {
+					oldTable.remove();
+				}
 
-			  function ajouterLigne(propriete, valeur) {
-				  var row = tbody.insertRow();
-				  row.insertCell(0).innerHTML = "<b>" + propriete + "</b>";	
-				  row.insertCell(1).innerHTML = valeur !== null ? valeur : "Non disponible";
-			  }
+				var table = document.createElement('table');
 
-			  ajouterLigne("Latitude", crd.latitude);
-			  ajouterLigne("Longitude", crd.longitude);
-			  ajouterLigne("Précision", crd.accuracy + " mètres");
-			  ajouterLigne("Altitude", crd.altitude);
-			  ajouterLigne("Vitesse", crd.speed);
-			  ajouterLigne("Date", new Date(pos.timestamp).toLocaleString());
+				var header = table.createTHead();
+				var headerRow = header.insertRow(0);
+				headerRow.insertCell(0).innerHTML = "<b>Propriété</b>";
+				headerRow.insertCell(1).innerHTML = "<b>Valeur</b>";
 
-			  document.getElementById('watchposition').appendChild(table);
+				var tbody = table.createTBody();
+
+				function ajouterLigne(propriete, valeur) {
+					var row = tbody.insertRow();
+					row.insertCell(0).innerHTML = "<b>" + propriete + "</b>"; 
+					row.insertCell(1).innerHTML = valeur !== null ? valeur : "Non disponible";
+				}
+
+				ajouterLigne("Latitude", crd.latitude);
+				ajouterLigne("Longitude", crd.longitude);
+				ajouterLigne("Précision", crd.accuracy + " mètres");
+				ajouterLigne("Altitude", crd.altitude);
+				ajouterLigne("Vitesse", crd.speed);
+				ajouterLigne("Date", new Date(pos.timestamp).toLocaleString());
+
+				document.getElementById('watchposition').appendChild(table);
 			}
 
 			function errorWatch(err) {
@@ -96,7 +104,7 @@
 			  console.warn(`ERREUR (${err.code}): ${err.message}`);
 			}
 
-			navigator.geolocation.watchPosition(successWatch, errorWatch, options);
+			navigator.geolocation.watchPosition(successWatch, errorWatch);
 		} else {
 			alert('Géolocalisation non supportée!');
 		}
