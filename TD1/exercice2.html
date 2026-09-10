@@ -5,20 +5,62 @@
 	<meta name='viewport' content='width=device-width, initial-scale=1'>
 	<title>TD1 - Exercice 2</title>
 	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
 <body>
-	<div id="map"></div>
+	<div id="map" style="height: 100vh;"></div>
 	<script>
 		var map = L.map('map').setView([51.505, -0.09], 13);
 
 		L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-		    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+			attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 		}).addTo(map);
 
-		L.marker([51.5, -0.09]).addTo(map)
-		    .bindPopup('A pretty CSS popup.<br> Easily customizable.')
-		    .openPopup();
+		L.marker([43.7,  7.25]).addTo(map)
+			.bindPopup('Nice, France')
+
+		L.polygon([
+		    [32.294, -64.783],
+		    [25.761, -80.191],
+		    [18.465, -66.105]
+		], {
+		    color: 'red',
+		    fillColor: '#f03',
+		    fillOpacity: 0.3
+		}).addTo(map).bindPopup('Le Triangle des Bermudes');
+
+		var dotIcon = L.divIcon({
+		    className: 'custom-dot-marker',
+		    html: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+		            <circle cx="12" cy="12" r="10" fill="#007bff" />
+		            <circle cx="12" cy="12" r="7" fill="white" />
+		            <circle cx="12" cy="12" r="4" fill="#007bff" />
+		           </svg>`,
+		    iconSize: [24, 24],
+		    iconAnchor: [12, 12]
+		});
+
+		var marker = L.marker()
+			.bindPopup('Vous êtes ici !')
+			.setIcon(dotIcon);
+
+		var first = true;
+
+		function successWatch(pos) {
+			var crd = pos.coords;
+
+			marker.setLatLng([crd.latitude, crd.longitude]).addTo(map);
+			if (first) {
+				map.setView([crd.latitude, crd.longitude], 25);
+				first = false;
+			}
+		}
+
+		function errorWatch(err) {
+		  console.warn(`ERREUR (${err.code}): ${err.message}`);
+		}
+
+		navigator.geolocation.watchPosition(successWatch, errorWatch);
 	</script>
 </body>
 </html>
