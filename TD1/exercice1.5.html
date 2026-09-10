@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+	<title>Exercice 1.5 Orientation</title>
+	<style>
+		body { 
+			margin: 0; 
+			overflow: hidden; 
+			background-color: #222; 
+			color: white;
+			font-family: sans-serif;
+		}
+		#ui-container {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			text-align: center;
+			z-index: 10;
+		}
+		button {
+			padding: 15px 25px;
+			font-size: 18px;
+			background-color: #007BFF;
+			color: white;
+			border: none;
+			border-radius: 8px;
+			cursor: pointer;
+		}
+	</style>
+	<script type="importmap">
+		{
+			"imports": {
+				"three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+			}
+		}
+	</script>
+</head>
+<body>
+
+	<div id="ui-container">
+		<h2>Détection de mouvement</h2>
+		<button id="btn-start">Autoriser l'accès aux capteurs</button>
+	</div>
+
+	<script type="module">
+		import * as THREE from 'three';
+
+		const scene = new THREE.Scene();
+		const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+		const renderer = new THREE.WebGLRenderer({ antialias: true });
+		
+		renderer.setSize(window.innerWidth, window.innerHeight);
+		document.body.appendChild(renderer.domElement);
+
+		const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+		scene.add(ambientLight);
+		const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+		directionalLight.position.set(5, 10, 7);
+		scene.add(directionalLight);
+
+		const geometry = new THREE.BoxGeometry(1.5, 3, 0.15); 
+		const materials = [
+			new THREE.MeshStandardMaterial({ color: 0x333333 }),
+			new THREE.MeshStandardMaterial({ color: 0x333333 }),
+			new THREE.MeshStandardMaterial({ color: 0x333333 }),
+			new THREE.MeshStandardMaterial({ color: 0x333333 }),
+			new THREE.MeshStandardMaterial({ color: 0x111111 }),
+			new THREE.MeshStandardMaterial({ color: 0x555555 })
+		];
+		
+		const phone = new THREE.Mesh(geometry, materials);
+		scene.add(phone);
+		camera.position.z = 5;
+
+		function handleOrientation(event) {
+			const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
+			const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
+			const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
+
+			phone.rotation.x = beta - Math.PI / 2;
+			phone.rotation.y = gamma;
+			phone.rotation.z = -alpha;
+		}
+
+		const btnStart = document.getElementById('btn-start');
+		const uiContainer = document.getElementById('ui-container');
+
+		btnStart.addEventListener('click', () => {
+			if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+				DeviceOrientationEvent.requestPermission()
+					.then(permissionState => {
+						if (permissionState === 'granted') {
+							window.addEventListener('deviceorientation', handleOrientation);
+							uiContainer.style.display = 'none';
+						} else {
+							alert("Permission refusée.");
+						}
+					})
+					.catch(console.error);
+			} else {
+				window.addEventListener('deviceorientation', handleOrientation);
+				uiContainer.style.display = 'none';
+			}
+		});
+
+		function animate() {
+			requestAnimationFrame(animate);
+			renderer.render(scene, camera);
+		}
+		animate();
+
+		window.addEventListener('resize', () => {
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize(window.innerWidth, window.innerHeight);
+		});
+	</script>
+</body>
+</html>
