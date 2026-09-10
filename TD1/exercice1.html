@@ -21,7 +21,7 @@
 			function success(pos) {
 				var crd = pos.coords;
 
-				var loadingElement = document.getElementById('loading-watchposition');
+				var loadingElement = document.getElementById('loading-getcurrentposition');
 				if (loadingElement) {
 					loadingElement.remove();
 				}
@@ -74,6 +74,7 @@
 				}
 
 				var table = document.createElement('table');
+				table.id = 'table-watch';
 
 				var header = table.createTHead();
 				var headerRow = header.insertRow(0);
