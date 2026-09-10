@@ -105,9 +105,9 @@
 			const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
 			const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
 
-			phone.rotation.x = beta;
-			phone.rotation.y = gamma;
-			phone.rotation.z = -alpha;
+			phoneGroup.rotation.x = beta;
+			phoneGroup.rotation.y = gamma;
+			phoneGroup.rotation.z = -alpha;
 		}
 
 		const btnStart = document.getElementById('btn-start');
@@ -119,6 +119,7 @@
 					.then(permissionState => {
 						if (permissionState === 'granted') {
 							window.addEventListener('deviceorientation', handleOrientation);
+							phoneGroup.visible = true;
 							uiContainer.style.display = 'none';
 						} else {
 							alert("Permission refusée.");
@@ -127,6 +128,7 @@
 					.catch(console.error);
 			} else {
 				window.addEventListener('deviceorientation', handleOrientation);
+				phoneGroup.visible = true;
 				uiContainer.style.display = 'none';
 			}
 		});
