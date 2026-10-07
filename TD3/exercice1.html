@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang='fr'>
+<head>
+	<meta charset='utf-8'>
+	<meta name='viewport' content='width=device-width, initial-scale=1'>
+	<title>TD3 - Exercice 1 - Globe</title>
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+	<style>
+		body { margin: 0; overflow: hidden; display: flex; }
+		#globe, #map { width: 50vw; height: 100vh; }
+		canvas { display: block; }
+	</style>
+	<script type="importmap">
+	{
+		"imports": {
+			"three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+			"three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+		}
+	}
+	</script>
+</head>
+<body>
+<div id="globe"></div>
+<div id="map"></div>
+
+<script type="module">
+	import * as THREE from 'three';
+	import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+	const API_KEY = 'rc_live_352dbf35d86a495fa98e0fd6d0209972';
+
+	const container = document.getElementById( 'globe' );
+
+	const scene = new THREE.Scene();
+	const camera = new THREE.PerspectiveCamera( 45, container.clientWidth / container.clientHeight, 0.1, 100 );
+
+	const renderer = new THREE.WebGLRenderer();
+	renderer.setSize( container.clientWidth, container.clientHeight );
+	container.appendChild( renderer.domElement );
+
+	const controls = new OrbitControls( camera, renderer.domElement );
+
+	scene.add( new THREE.AmbientLight( 0xffffff, 1 ) );
+	const light = new THREE.DirectionalLight( 0xffffff, 2 );
+	light.position.set( 5, 3, 5 );
+	scene.add( light );
+
+	const texture = new THREE.TextureLoader().load( 'textures/earth.jpg' );
+	texture.colorSpace = THREE.SRGBColorSpace;
+	const earth = new THREE.Mesh(
+		new THREE.SphereGeometry( 1, 64, 64 ),
+		new THREE.MeshPhongMaterial( { map: texture } )
+	);
+	scene.add( earth );
+
+	function latLonToVector3( lat, lon, radius = 1 ) {
+		const phi = THREE.MathUtils.degToRad( lat );
+		const lambda = THREE.MathUtils.degToRad( lon );
+		return new THREE.Vector3(
+			radius * Math.cos( phi ) * Math.cos( lambda ),
+			radius * Math.sin( phi ),
+			- radius * Math.cos( phi ) * Math.sin( lambda )
+		);
+	}
+
+	function vector3ToLatLon( point ) {
+		const p = point.clone().normalize();
+		return {
+			lat: THREE.MathUtils.radToDeg( Math.asin( p.y ) ),
+			lon: THREE.MathUtils.radToDeg( Math.atan2( - p.z, p.x ) ),
+		};
+	}
+
+	camera.position.copy( latLonToVector3( 46, 2, 3.5 ) );
+
+	const map = L.map( 'map' ).setView( [ 46, 2 ], 4 );
+	L.tileLayer( 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+		attribution: '&copy; OpenStreetMap',
+	} ).addTo( map );
+
+	function focusGlobe( lat, lon ) {
+		camera.position.copy( latLonToVector3( lat, lon, camera.position.length() ) );
+	}
+
+	map.on( 'click', ( event ) => focusGlobe( event.latlng.lat, event.latlng.lng ) );
+
+	const raycaster = new THREE.Raycaster();
+	const pointer = new THREE.Vector2();
+	let downX, downY;
+
+	renderer.domElement.addEventListener( 'pointerdown', ( event ) => {
+		downX = event.clientX;
+		downY = event.clientY;
+	} );
+
+	renderer.domElement.addEventListener( 'click', ( event ) => {
+		if ( Math.hypot( event.clientX - downX, event.clientY - downY ) > 5 ) return;
+
+		const rect = renderer.domElement.getBoundingClientRect();
+		pointer.x = ( ( event.clientX - rect.left ) / rect.width ) * 2 - 1;
+		pointer.y = - ( ( event.clientY - rect.top ) / rect.height ) * 2 + 1;
+		raycaster.setFromCamera( pointer, camera );
+
+		const hit = raycaster.intersectObject( earth )[ 0 ];
+		if ( ! hit ) return;
+		const { lat, lon } = vector3ToLatLon( hit.point );
+		map.setView( [ lat, lon ], 5 );
+	} );
+
+	navigator.geolocation.getCurrentPosition( ( position ) => {
+		const { latitude, longitude } = position.coords;
+		const marker = new THREE.Mesh(
+			new THREE.SphereGeometry( 0.02 ),
+			new THREE.MeshBasicMaterial( { color: 0xff0000 } )
+		);
+		marker.position.copy( latLonToVector3( latitude, longitude ) );
+		earth.add( marker );
+
+		L.marker( [ latitude, longitude ] ).addTo( map ).bindTooltip( 'Ma position' )
+			.on( 'click', () => focusGlobe( latitude, longitude ) );
+	} );
+
+	async function loadCountries() {
+		const flagLoader = new THREE.TextureLoader();
+		for ( let offset = 0; ; offset += 200 ) {
+			const response = await fetch(
+				`https://api.restcountries.com/countries/v5?limit=100&offset=${ offset }&response_fields=names.common,coordinates,codes.alpha_2`,
+				{ headers: { Authorization: `Bearer ${ API_KEY }` } }
+			);
+			const countries = ( await response.json() ).data.objects;
+
+			for ( const country of countries ) {
+				const code = country.codes.alpha_2.toLowerCase();
+				if ( ! code ) continue;
+				const { lat, lng } = country.coordinates;
+
+				const flag = flagLoader.load( `https://flagcdn.com/w80/${ code }.png` );
+				flag.colorSpace = THREE.SRGBColorSpace;
+				const sprite = new THREE.Sprite( new THREE.SpriteMaterial( { map: flag } ) );
+				sprite.scale.set( 0.06, 0.04, 1 );
+				sprite.position.copy( latLonToVector3( lat, lng, 1.02 ) );
+				sprite.name = country.names.common;
+				earth.add( sprite );
+
+				L.circleMarker( [ lat, lng ], { radius: 4, bubblingMouseEvents: false } ).addTo( map )
+					.bindTooltip( country.names.common )
+					.on( 'click', () => focusGlobe( lat, lng ) );
+			}
+
+			if ( countries.length < 100 ) break;
+		}
+	}
+	loadCountries();
+
+	window.addEventListener( 'resize', () => {
+		camera.aspect = container.clientWidth / container.clientHeight;
+		camera.updateProjectionMatrix();
+		renderer.setSize( container.clientWidth, container.clientHeight );
+	} );
+
+	function animate() {
+		controls.update();
+		renderer.render( scene, camera );
+	}
+	renderer.setAnimationLoop( animate );
+</script>
+</body>
+</html>
