@@ -45,7 +45,6 @@
 	const bottom = loadTexture( 'textures/dirt.png' );
 	const materials = [ side, side, top, bottom, side, side ];
 	const cube = new THREE.Mesh( geometry, materials );
-	cube.position.x = -1.5;
 	scene.add( cube );
 
 	let companionCube;
@@ -53,7 +52,6 @@
 	gltfLoader.load( 'models/companion_cube/scene.gltf', function ( gltf ) {
 		companionCube = gltf.scene;
 		companionCube.scale.set( 0.5, 0.5, 0.5 );
-		companionCube.position.set( 1.5, 0, 0 );
 		scene.add( companionCube );
 	}, undefined, function ( error ) {
 		console.error( error );
@@ -67,6 +65,12 @@
 	scene.add( ambient );
 
 	camera.position.z = 5;
+
+	window.addEventListener( 'resize', () => {
+		camera.aspect = window.innerWidth / window.innerHeight;
+		camera.updateProjectionMatrix();
+		renderer.setSize( window.innerWidth, window.innerHeight );
+	} );
 
 	let orientation = null;
 	let jumpSpeed = 0;
@@ -106,7 +110,13 @@
 		jumpSpeed -= 15 * dt;
 		jumpHeight = Math.max( 0, jumpHeight + jumpSpeed * dt );
 		if ( jumpHeight === 0 ) jumpSpeed = 0;
-		if ( companionCube ) companionCube.position.y = jumpHeight;
+		if ( camera.aspect < 1 ) {
+			cube.position.set( 0, 1.5, 0 );
+			if ( companionCube ) companionCube.position.set( 0, - 1.5 + jumpHeight, 0 );
+		} else {
+			cube.position.set( - 1.5, 0, 0 );
+			if ( companionCube ) companionCube.position.set( 1.5, jumpHeight, 0 );
+		}
 
 		renderer.render( scene, camera );
 	}
