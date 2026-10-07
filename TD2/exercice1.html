@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang='fr'>
+<head>
+	<meta charset='utf-8'>
+	<meta name='viewport' content='width=device-width, initial-scale=1'>
+	<title>TD2 - Exercice 1 - Three.js</title>
+	<style>
+		body { margin: 0; overflow: hidden; }
+		canvas { display: block; }
+	</style>
+	<script type="importmap">
+	{
+		"imports": {
+			"three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+			"three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+		}
+	}
+	</script>
+</head>
+<body>
+
+<script type="module">
+	import * as THREE from 'three';
+	import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+	const scene = new THREE.Scene();
+	scene.background = new THREE.Color( 0x78a7ff );
+	const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+
+	const renderer = new THREE.WebGLRenderer();
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	document.body.appendChild( renderer.domElement );
+
+	const geometry = new THREE.BoxGeometry( 1, 1, 1 );
+	const loader = new THREE.TextureLoader();
+	function loadTexture( path ) {
+		const texture = loader.load( path );
+		texture.colorSpace = THREE.SRGBColorSpace;
+		texture.magFilter = THREE.NearestFilter;
+		return new THREE.MeshPhongMaterial( { map: texture } );
+	}
+	const side = loadTexture( 'textures/grass_block_side.png' );
+	const top = loadTexture( 'textures/grass_block_top.png' );
+	top.color.set( 0x7cbd6b );
+	const bottom = loadTexture( 'textures/dirt.png' );
+	const materials = [ side, side, top, bottom, side, side ];
+	const cube = new THREE.Mesh( geometry, materials );
+	cube.position.x = -1.5;
+	scene.add( cube );
+
+	let companionCube;
+	const gltfLoader = new GLTFLoader();
+	gltfLoader.load( 'models/companion_cube/scene.gltf', function ( gltf ) {
+		companionCube = gltf.scene;
+		companionCube.scale.set( 0.5, 0.5, 0.5 );
+		companionCube.position.set( 1.5, 0, 0 );
+		scene.add( companionCube );
+	}, undefined, function ( error ) {
+		console.error( error );
+	} );
+
+	const light = new THREE.DirectionalLight( 0xffffff, 3 );
+	light.position.set( -1, 2, 4 );
+	scene.add( light );
+
+	const ambient = new THREE.AmbientLight( 0xffffff, 1 );
+	scene.add( ambient );
+
+	camera.position.z = 5;
+
+	let orientation = null;
+	let jumpSpeed = 0;
+	let jumpHeight = 0;
+
+	window.addEventListener( 'click', async () => {
+		if ( DeviceOrientationEvent.requestPermission ) {
+			const permission = await DeviceOrientationEvent.requestPermission();
+			if ( permission !== 'granted' ) return;
+		}
+		window.addEventListener( 'deviceorientation', ( event ) => {
+			if ( event.beta !== null ) orientation = event;
+		} );
+		window.addEventListener( 'devicemotion', ( event ) => {
+			const a = event.acceleration;
+			if ( Math.hypot( a.x, a.y, a.z ) > 15 && jumpHeight === 0 ) jumpSpeed = 6;
+		} );
+	}, { once: true } );
+
+	let lastTime = 0;
+	function animate( time ) {
+		const dt = ( time - lastTime ) / 1000;
+		lastTime = time;
+
+		if ( orientation ) {
+			const alpha = THREE.MathUtils.degToRad( orientation.alpha );
+			const beta = THREE.MathUtils.degToRad( orientation.beta );
+			const gamma = THREE.MathUtils.degToRad( orientation.gamma );
+			cube.rotation.set( beta, alpha, - gamma, 'YXZ' );
+			if ( companionCube ) companionCube.rotation.set( beta, alpha, - gamma, 'YXZ' );
+		} else {
+			cube.rotation.x = time / 2000;
+			cube.rotation.y = time / 1000;
+			if ( companionCube ) companionCube.rotation.y = time / 1000;
+		}
+
+		jumpSpeed -= 15 * dt;
+		jumpHeight = Math.max( 0, jumpHeight + jumpSpeed * dt );
+		if ( jumpHeight === 0 ) jumpSpeed = 0;
+		if ( companionCube ) companionCube.position.y = jumpHeight;
+
+		renderer.render( scene, camera );
+	}
+	renderer.setAnimationLoop( animate );
+</script>
+</body>
+</html>

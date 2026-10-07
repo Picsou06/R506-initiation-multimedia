@@ -9,11 +9,16 @@
 </head>
 <body>
 	<div id="map" style="height: 100vh;"></div>
+	<div id="infoPanel" style="position: absolute; z-index: 1000; top: 10px; right: 10px; background: white; padding: 8px 12px; border-radius: 4px; font-family: sans-serif; font-size: 14px; box-shadow: 0 1px 5px rgba(0,0,0,0.4);">
+		Distance à Marseille : en attente de la position...
+	</div>
 	<script>
 		var map = L.map('map').setView([51.505, -0.09], 13);
 
-		L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-			attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+		L.tileLayer('https://tiles.stadiamaps.com/tiles/stamen_terrain/{z}/{x}/{y}{r}.png?api_key=eed6a6b4-d171-43e4-8215-e5f8490b4245', {
+			minZoom: 1,
+			maxZoom: 18,
+			attribution: '&copy; <a href="https://stadiamaps.com/" target="_blank">Stadia Maps</a> &copy; <a href="https://stamen.com/" target="_blank">Stamen Design</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
 		}).addTo(map);
 
 		L.marker([43.7,  7.25]).addTo(map)
@@ -46,6 +51,44 @@
 
 		var first = true;
 
+		var precisioncircle = L.circle([0, 0], {
+			color: 'blue',
+			fillColor: '#007bff',
+			fillOpacity: 0.2,
+			radius: 0
+		});
+
+		var marseillepos;
+
+		L.polyline([[43.29695, 5.36978], [43.7,  7.25]], {color: 'green', weight: 4, opacity: 0.7}).addTo(map);
+
+		var marseillemarker = L.marker([43.29695, 5.36978]).addTo(map)
+			.bindPopup('Marseille, France');
+
+		// Données GeoJSON : contour de la commune de Nice (source: geo.api.gouv.fr)
+		fetch('https://geo.api.gouv.fr/communes/06088?format=geojson&geometry=contour')
+			.then(res => res.json())
+			.then(data => {
+				L.geoJSON(data, {
+					style: { color: 'purple', weight: 2, fillOpacity: 0.05 }
+				}).addTo(map).bindPopup('Contour de la commune de Nice (GeoJSON, geo.api.gouv.fr)');
+			})
+			.catch(err => console.warn('Erreur chargement GeoJSON Nice :', err));
+
+		// Trajet routier Marseille -> Nice via OSRM
+		fetch('https://router.project-osrm.org/route/v1/driving/5.36978,43.29695;7.25,43.7?overview=full&geometries=geojson')
+			.then(res => res.json())
+			.then(data => {
+				var route = data.routes[0];
+				var routeLine = L.geoJSON(route.geometry, {
+					style: { color: 'orange', weight: 4, dashArray: '6 6' }
+				}).addTo(map);
+				var km = (route.distance / 1000).toFixed(1);
+				var mn = (route.duration / 60).toFixed(0);
+				routeLine.bindPopup(`Trajet routier Marseille → Nice (OSRM)<br>${km} km, ${mn} min`);
+			})
+			.catch(err => console.warn('Erreur chargement itinéraire OSRM :', err));
+
 		function successWatch(pos) {
 			var crd = pos.coords;
 
@@ -54,6 +97,13 @@
 				map.setView([crd.latitude, crd.longitude], 25);
 				first = false;
 			}
+			precisioncircle.setLatLng([crd.latitude, crd.longitude]).setRadius(crd.accuracy).addTo(map);
+
+			marseillepos = map.distance([crd.latitude, crd.longitude], [43.29695, 5.36978]);
+			var distanceTxt = `Distance à Marseille : ${(marseillepos / 1000).toFixed(2)} km`;
+			console.log(distanceTxt);
+			document.getElementById('infoPanel').textContent = distanceTxt;
+			marker.bindPopup(`Vous êtes ici !<br>${distanceTxt}`);
 		}
 
 		function errorWatch(err) {
