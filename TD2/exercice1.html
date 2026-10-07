@@ -7,6 +7,14 @@
 	<style>
 		body { margin: 0; overflow: hidden; }
 		canvas { display: block; }
+		#start {
+			position: absolute; inset: 0;
+			display: flex; align-items: center; justify-content: center;
+			background: black; color: white; font-family: sans-serif; font-size: 20px;
+		}
+		@media ( pointer: fine ) {
+			#start { display: none; }
+		}
 	</style>
 	<script type="importmap">
 	{
@@ -18,6 +26,7 @@
 	</script>
 </head>
 <body>
+<div id="start">Cliquez pour autoriser les capteurs</div>
 
 <script type="module">
 	import * as THREE from 'three';
@@ -77,6 +86,7 @@
 	let jumpHeight = 0;
 
 	window.addEventListener( 'click', async () => {
+		document.getElementById( 'start' ).remove();
 		if ( DeviceOrientationEvent.requestPermission ) {
 			const permission = await DeviceOrientationEvent.requestPermission();
 			if ( permission !== 'granted' ) return;
