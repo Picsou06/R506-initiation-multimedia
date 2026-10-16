@@ -74,14 +74,20 @@
 
 	camera.position.copy( latLonToVector3( 46, 2, 3.5 ) );
 
-	const map = L.map( 'map' ).setView( [ 46, 2 ], 4 );
+	const map = L.map( 'map', {
+		minZoom: 2,
+		maxBounds: [ [ - 90, - 180 ], [ 90, 180 ] ],
+		maxBoundsViscosity: 1,
+	} ).setView( [ 46, 2 ], 4 );
 	L.tileLayer( 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 		attribution: '&copy; OpenStreetMap',
 	} ).addTo( map );
 
+	let focusTarget = null;
 	function focusGlobe( lat, lon ) {
-		camera.position.copy( latLonToVector3( lat, lon, camera.position.length() ) );
+		focusTarget = latLonToVector3( lat, lon );
 	}
+	controls.addEventListener( 'start', () => focusTarget = null );
 
 	map.on( 'click', ( event ) => focusGlobe( event.latlng.lat, event.latlng.lng ) );
 
@@ -104,6 +110,8 @@
 
 		const hit = raycaster.intersectObject( earth )[ 0 ];
 		if ( ! hit ) return;
+		const clicked = cubes.includes( hit.object ) && hit.object !== selected ? hit.object : null;
+		selectCube( clicked );
 		const { lat, lon } = vector3ToLatLon( hit.point );
 		map.setView( [ lat, lon ], 5 );
 	} );
@@ -121,9 +129,25 @@
 			.on( 'click', () => focusGlobe( latitude, longitude ) );
 	} );
 
+	const cubes = [];
+	let selected = null;
+	let spinAngle = 0;
+
+	function selectCube( cube ) {
+		if ( selected ) {
+			selected.quaternion.copy( selected.userData.base );
+			selected.userData.marker.setStyle( { color: '#3388ff', radius: 4 } ).closeTooltip();
+		}
+		selected = cube;
+		spinAngle = 0;
+		if ( selected ) selected.userData.marker.setStyle( { color: 'red', radius: 8 } ).openTooltip();
+	}
+
 	async function loadCountries() {
 		const flagLoader = new THREE.TextureLoader();
-		for ( let offset = 0; ; offset += 200 ) {
+		const cubeGeometry = new THREE.BoxGeometry( 0.04, 0.04, 0.04 );
+		const frenchNames = new Intl.DisplayNames( [ 'fr' ], { type: 'region' } );
+		for ( let offset = 0; ; offset += 100 ) {
 			const response = await fetch(
 				`https://api.restcountries.com/countries/v5?limit=100&offset=${ offset }&response_fields=names.common,coordinates,codes.alpha_2`,
 				{ headers: { Authorization: `Bearer ${ API_KEY }` } }
@@ -134,18 +158,25 @@
 				const code = country.codes.alpha_2.toLowerCase();
 				if ( ! code ) continue;
 				const { lat, lng } = country.coordinates;
+				const frenchName = frenchNames.of( code.toUpperCase() );
+				const name = frenchName !== code.toUpperCase() ? frenchName : country.names.common;
 
 				const flag = flagLoader.load( `https://flagcdn.com/w80/${ code }.png` );
 				flag.colorSpace = THREE.SRGBColorSpace;
-				const sprite = new THREE.Sprite( new THREE.SpriteMaterial( { map: flag } ) );
-				sprite.scale.set( 0.06, 0.04, 1 );
-				sprite.position.copy( latLonToVector3( lat, lng, 1.02 ) );
-				sprite.name = country.names.common;
-				earth.add( sprite );
+				const cube = new THREE.Mesh( cubeGeometry, new THREE.MeshPhongMaterial( { map: flag } ) );
+				cube.position.copy( latLonToVector3( lat, lng, 1.06 ) );
+				cube.lookAt( 0, 0, 0 );
+				cube.name = name;
+				cube.userData.base = cube.quaternion.clone();
+				earth.add( cube );
+				cubes.push( cube );
 
-				L.circleMarker( [ lat, lng ], { radius: 4, bubblingMouseEvents: false } ).addTo( map )
-					.bindTooltip( country.names.common )
-					.on( 'click', () => focusGlobe( lat, lng ) );
+				cube.userData.marker = L.circleMarker( [ lat, lng ], { radius: 4, bubblingMouseEvents: false } ).addTo( map )
+					.bindTooltip( name )
+					.on( 'click', () => {
+						selectCube( cube === selected ? null : cube );
+						focusGlobe( lat, lng );
+					} );
 			}
 
 			if ( countries.length < 100 ) break;
@@ -159,7 +190,27 @@
 		renderer.setSize( container.clientWidth, container.clientHeight );
 	} );
 
-	function animate() {
+	const spinEuler = new THREE.Euler();
+	const spinQuaternion = new THREE.Quaternion();
+	let lastTime = 0;
+	function animate( time ) {
+		const dt = ( time - lastTime ) / 1000;
+		lastTime = time;
+
+		if ( focusTarget ) {
+			const distance = camera.position.length();
+			const direction = camera.position.clone().normalize();
+			direction.lerp( focusTarget, 1 - Math.exp( - 4 * dt ) ).normalize();
+			camera.position.copy( direction ).multiplyScalar( distance );
+			if ( direction.angleTo( focusTarget ) < 0.001 ) focusTarget = null;
+		}
+
+		if ( selected ) {
+			spinAngle += 0.5 * dt;
+			spinQuaternion.setFromEuler( spinEuler.set( spinAngle, spinAngle * 2, spinAngle ) );
+			selected.quaternion.copy( selected.userData.base ).multiply( spinQuaternion );
+		}
+
 		controls.update();
 		renderer.render( scene, camera );
 	}
