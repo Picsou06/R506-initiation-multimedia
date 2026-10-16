@@ -148,7 +148,8 @@
 
 	async function loadCountries() {
 		const flagLoader = new THREE.TextureLoader();
-		const cubeGeometry = new THREE.BoxGeometry( 0.04, 0.04, 0.04 );
+		const cubeGeometry = new THREE.BoxGeometry( 0.06, 0.04, 0.004 );
+		const edgeMaterial = new THREE.MeshPhongMaterial( { color: 0xdddddd } );
 		const frenchNames = new Intl.DisplayNames( [ 'fr' ], { type: 'region' } );
 		for ( let offset = 0; ; offset += 100 ) {
 			const response = await fetch(
@@ -166,7 +167,8 @@
 
 				const flag = flagLoader.load( `https://flagcdn.com/w80/${ code }.png` );
 				flag.colorSpace = THREE.SRGBColorSpace;
-				const cube = new THREE.Mesh( cubeGeometry, new THREE.MeshPhongMaterial( { map: flag } ) );
+				const flagMaterial = new THREE.MeshPhongMaterial( { map: flag } );
+				const cube = new THREE.Mesh( cubeGeometry, [ edgeMaterial, edgeMaterial, edgeMaterial, edgeMaterial, flagMaterial, flagMaterial ] );
 				cube.position.copy( latLonToVector3( lat, lng, 1.06 ) );
 				cube.lookAt( 0, 0, 0 );
 				cube.name = name;
