@@ -73,6 +73,18 @@
 	const ambient = new THREE.AmbientLight( 0xffffff, 1 );
 	scene.add( ambient );
 
+	const snowCount = 500;
+	const snowPositions = new Float32Array( snowCount * 3 );
+	for ( let i = 0; i < snowCount * 3; i += 3 ) {
+		snowPositions[ i ] = THREE.MathUtils.randFloatSpread( 20 );
+		snowPositions[ i + 1 ] = THREE.MathUtils.randFloatSpread( 14 );
+		snowPositions[ i + 2 ] = THREE.MathUtils.randFloat( - 6, 3 );
+	}
+	const snowGeometry = new THREE.BufferGeometry();
+	snowGeometry.setAttribute( 'position', new THREE.BufferAttribute( snowPositions, 3 ) );
+	const snow = new THREE.Points( snowGeometry, new THREE.PointsMaterial( { color: 0xffffff, size: 0.08 } ) );
+	scene.add( snow );
+
 	camera.position.z = 5;
 
 	window.addEventListener( 'resize', () => {
@@ -127,6 +139,14 @@
 			cube.position.set( - 1.5, 0, 0 );
 			if ( companionCube ) companionCube.position.set( 1.5, jumpHeight, 0 );
 		}
+
+		for ( let i = 1; i < snowCount * 3; i += 3 ) {
+			snowPositions[ i ] -= dt;
+			while ( snowPositions[ i ] < - 7 ) {
+				snowPositions[ i ] += 14;
+			}
+		}
+		snowGeometry.attributes.position.needsUpdate = true;
 
 		renderer.render( scene, camera );
 	}
